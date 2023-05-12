@@ -35,9 +35,7 @@ const loc = moment.locale('en',
 export default function MyApp({ Component, pageProps }) {
   return (
     <ThemeProvider theme={theme}>
-      <LocalizationProvider dateAdapter={AdapterMoment}>
         <Layout><Component {...pageProps} /></Layout>
-      </LocalizationProvider>
     </ThemeProvider>
 
   )

@@ -1,13 +1,11 @@
 const { app, BrowserWindow, ipcMain } = require('electron')
 const path = require('path');
 const url = require('url');
-const port = 3001
+const port = 3003
 var serialNumber = require('serial-number')
 
 
-serialNumber(function (err, value) {
-	console.log('SERIAL NUMBER: ' + value)
-})
+
 
 
 //// --------> CONFIG JSON APP <-------/////////
@@ -17,8 +15,8 @@ const rawDataConfig = fs.readFileSync(filePathConfig)
 const config = JSON.parse(rawDataConfig)
 
 ///// --------> NODE ENV <-------/////////
-const env = process.env.NODE_ENV
-//const env = 'build'
+//const env = process.env.NODE_ENV
+const env = 'build'
 ///// --------------------------/////////
 
 
@@ -32,10 +30,12 @@ exp.use(express.json())
 exp.use(express.urlencoded({ extended: false }))
 const cors = require('cors')
 exp.use(cors({ origin: '*' }))
+exp.use(express.static(path.join(__dirname, './out')))
 
+exp.use(require('./printRoute'))
 
 exp.get('/', (req, res) => {
-	res.send('Server Work from Brries APP')
+	res.send('Server Work')
 })
 
 exp.listen(port, () => {
@@ -46,7 +46,7 @@ exp.listen(port, () => {
 /////// --------> ELECTRON CONFIG <-------/////////
 const createWindow = () => {
 	var win = new BrowserWindow({
-		width: 300,
+		width: 350,
 		height: 500,
 		minWidth: 300,
 		minHeight: 500,
@@ -78,7 +78,6 @@ const createWindow = () => {
 			splash.show()
 			setTimeout(function () {
 				splash.close();
-				win.maximize()
 				win.show();
 			}, 6000);
 		}, 2000)
@@ -135,7 +134,6 @@ function ejecuteNext(win, splash) {
 				splash.show()
 				setTimeout(function () {
 					splash.close();
-					win.maximize()
 					win.show();
 				}, 6000);
 			}, 2000)
@@ -145,26 +143,26 @@ function ejecuteNext(win, splash) {
 
 /////// --------> IPC COMMUNICATION <-------/////////
 
-
+ipcMain.on('get-serial', (e, arg) => {
+	serialNumber(function (err, value) {
+		console.log('SERIAL NUMBER: ' + value)
+		e.returnValue = value
+	})
+})
 
 ipcMain.on('read-config', (e, arg) => {
 	e.returnValue = config
 })
 
-
-ipcMain.on('write-config', (e, arg) => {
-	config.db_name = config.db_name
-	config.db_user = config.db_user
-	config.db_host = config.db_host
-	config.db_password = config.db_password
-	config.port_app = config.port_app
-	config.app_pass = arg
-	config.server_url = config.server_url
-
-
+ipcMain.on('update-config', (e, arg) => {
+	let rawDataConfig = fs.readFileSync(filePathConfig)
+	let config = JSON.parse(rawDataConfig)
+	config.printer = arg
 	data = JSON.stringify(config)
 	fs.writeFileSync(filePathConfig, data)
 })
+
+
 
 
 
