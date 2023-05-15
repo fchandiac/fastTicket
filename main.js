@@ -11,8 +11,8 @@ const rawDataConfig = fs.readFileSync(filePathConfig)
 const config = JSON.parse(rawDataConfig)
 
 ///// --------> NODE ENV <-------/////////
-const env = process.env.NODE_ENV
-//const env = 'build'
+//const env = process.env.NODE_ENV
+const env = 'build'
 ///// --------------------------/////////
 
 
@@ -82,17 +82,20 @@ const createWindow = () => {
 	}
 }
 
-// Verificar si ya hay una instancia de la aplicación en ejecución
-const gotTheLock = app.requestSingleInstanceLock()
+/////// --------> APP CONFIG <-------/////////
+
+const gotTheLock = app.requestSingleInstanceLock() // Verificar si ya hay una instancia de la aplicación en ejecución
+app.disableHardwareAcceleration()
 
 if (!gotTheLock){
+	app.quit()
+} else {
 	app.on('ready', createWindow)
+	app.on('window-all-closed', () => {
+		app.quit()
+	})
 }
 
-
-app.on('window-all-closed', () => {
-	app.quit()
-})
 
 function ejecuteNext(win, splash) {
 	/////// --------> NEXT SERVER <-------/////////
@@ -151,7 +154,7 @@ ipcMain.on('read-config', (e, arg) => {
 	e.returnValue = config
 })
 
-ipcMain.on('update-config', (e, arg) => {
+ipcMain.on('update-printer', (e, arg) => {
 	let rawDataConfig = fs.readFileSync(filePathConfig)
 	let config = JSON.parse(rawDataConfig)
 	config.printer = arg
@@ -159,24 +162,34 @@ ipcMain.on('update-config', (e, arg) => {
 	fs.writeFileSync(filePathConfig, data)
 })
 
+ipcMain.on('update-ticket-info', (e, arg) => {
+	let rawDataConfig = fs.readFileSync(filePathConfig)
+	let config = JSON.parse(rawDataConfig)
+	config.ticket_info = arg
+	data = JSON.stringify(config)
+	fs.writeFileSync(filePathConfig, data)
+})
+
 /////// --------> IPC PRINT COMMUNICATION <-------/////////
 const escpos = require('escpos')
 escpos.USB = require('escpos-usb')
-const usb = require('usb')
+const usb = require('usb');
+const { Device } = require('usb/dist/usb');
 
 ipcMain.on('print', (e, printInfo) => {
 	const device = new escpos.USB(printInfo.printer.idVendor, printInfo.printer.idProduct)
 	const options = { encoding: "GB18030" /* default */ }
 	const printer = new escpos.Printer(device)
 	let stamp = printInfo.stamp
-	let total = 678
-	let folio = 123456
-	let iva = 19
-
-	console.log(typeof printInfo.date )
-
+	let total = printInfo.total
+	let invoiceNumber = printInfo.invoiceNumber
+	let iva = printInfo.iva
+	let name = printInfo.name
+	let rut = printInfo.rut
+	let address = printInfo.address
+	let phone = printInfo.phone
+	
 	escpos.Image.load(stamp, function (image) {
-
 		device.open(function () {
 			printer
 			.font('b').align('ct').style('NORMAL')
@@ -186,27 +199,23 @@ ipcMain.on('print', (e, printInfo) => {
             .size(1, 0)
             .text('BOLETA ELECTRONICA')
             .size(0, 0)
-            .text('Nro: ' + folio)
+            .text('Nro: ' + invoiceNumber)
             .text('')
             .text('_________________________________________')
             .text('')
-                   .text('TRIMATH FERRETERIA')
-                    .text('76.554.369-K')
-                    .text('Anibal Pinto #96')
+                   .text(name)
+                    .text(rut)
+                    .text(address)
+					.text(phone)
                     .text('_________________________________________')
                     .size(1, 0)
                     .text('')
                     .text('TOTAL: ' + renderMoneystr(total))
                     .text('')
                     .size(0, 0)
-                    // let date_line = 'fecha: ' + printInfo.date + 'hora: ' + printInfo.time
-                    // .text('')
-                    // let iva_line = 'El iva de esta boleta es: ' + renderMoneystr(parseInt(iva))
-                    // .text(iva_line)
-                    // .text('')
+                    .text('El iva de esta boleta es: ' + renderMoneystr(parseInt(iva)))
+                    .text('')
 				.text('fecha: ' + printInfo.date + ' hora: ' + printInfo.time)
-                    //.text(date_line)
-			
 				.align('ct')
 				.image(image, 'd24')
 				.then(() => {
@@ -218,7 +227,9 @@ ipcMain.on('print', (e, printInfo) => {
 					.cut()
 					.close()
 				})
+				
 	})
+	device.close()
 	})
 })
 
