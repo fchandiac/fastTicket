@@ -82,7 +82,14 @@ const createWindow = () => {
 	}
 }
 
-app.on('ready', createWindow);
+// Verificar si ya hay una instancia de la aplicación en ejecución
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock){
+	app.on('ready', createWindow)
+}
+
+
 app.on('window-all-closed', () => {
 	app.quit()
 })

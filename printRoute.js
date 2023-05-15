@@ -63,6 +63,7 @@ function ticket(total, printerInfo, timbre_img, iva, folio) {
                 device.open(function (error) {
                     printer.font('b').align('ct').style('NORMAL')
                     printer.size(0, 0)
+                    printer.text('TEST 1.0.9')
                     printer.text('_________________________________________')
                     printer.text('')
                     printer.size(1, 0)
@@ -99,11 +100,11 @@ function ticket(total, printerInfo, timbre_img, iva, folio) {
                             printer.text('')
                             // printer.cashdraw(2)
                             printer.cut()
-                            printer.flush()
+                            //printer.flush()
                             printer.close()
                         })
-
                 })
+                device.close()
             })
             resolve({ 'code': 1, 'data': 'success' })
 
