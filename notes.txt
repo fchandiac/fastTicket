@@ -46,7 +46,7 @@ npm i escpos-usb@3.0.0-alpha.4 --save
     --> uncomment const env = 'build' on main.js
     --> npm run pack-mac/pack-win
 
-
+{"printer":{"idVendor":1046,"idProduct":20497}}
 ---- PENDIENTES ----
 -MODALS
 -FORMS

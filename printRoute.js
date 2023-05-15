@@ -3,34 +3,39 @@ const router = express.Router()
 const escpos = require('escpos')
 const moment = require('moment')
 escpos.USB = require('escpos-usb')
+const usb = require('usb')
 
 
 
 
-router.post('/print/test', (req, res) => {
-    test(req.body.printerInfo)
-        .then(() => {
-            res.json({ status: 'success' })
+router.post('/print/findPrinter', (req, res) => {
+    findPrinter(req.body.printerInfo)
+        .then(res => {
+            res.json(res)
         })
         .catch(err => {
-            console.log(err)
             res.json(err)
         })
 })
 
 
 
-function test(printerInfo) {
+function findPrinter(printerInfo) {
     const print = new Promise((resolve, reject) => {
         try {
-            const device = new escpos.USB(parseInt(printerInfo.idVendor), parseInt(printerInfo.idProduct))
-            const options = { encoding: "GB18030" /* default */ }
-            const printer = new escpos.Printer(device, options)
-            device.open(function (error) {
-                printer.close()
-                resolve({ code: 1, data: 'success' })
-            })
-            device.close()
+            let devices = usb.getDeviceList()
+            console.log(devices)
+            const idVendor = parseInt(printerInfo.idVendor) 
+            const idProduct = parseInt(printerInfo.idProduct) 
+
+            const device = devices.find(dev => dev.deviceDescriptor.idVendor === idVendor && dev.deviceDescriptor.idProduct === idProduct);
+
+            if (device) {
+                resolve({ code: 1, data: {message: 'Dispositivo encontrado', device: device} })
+            } else {
+                console.log('Dispositivo no encontrado')
+                reject({ code: 0, data: 'Dispositivo no encontrado' })
+            }
         } catch (err) {
             reject({ code: 0, data: err })
         }
@@ -81,7 +86,7 @@ function ticket(total, printerInfo, timbre_img, iva, folio) {
                     let time = moment(today).format('HH:mm:ss')
                     let date_line = 'fecha: ' + date + ' hora: ' + time
                     printer.text('')
-                    let iva_line = 'El iva de esta boleta es: ' + renderMoneystr(parseInt(iva)) 
+                    let iva_line = 'El iva de esta boleta es: ' + renderMoneystr(parseInt(iva))
                     printer.text(iva_line)
                     printer.text('')
                     printer.text(date_line)
@@ -94,12 +99,12 @@ function ticket(total, printerInfo, timbre_img, iva, folio) {
                             printer.text('')
                             // printer.cashdraw(2)
                             printer.cut()
+                            printer.flush()
                             printer.close()
                         })
-                    
+
                 })
             })
-            device.close()
             resolve({ 'code': 1, 'data': 'success' })
 
         } catch (err) {
